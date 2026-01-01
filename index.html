@@ -3,63 +3,144 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Photo Editor</title>
+<title>Photo Frame Editor</title>
 
 <style>
-body {
-    font-family: Arial, sans-serif;
-    margin: 0;
-    padding: 20px;
-    background-color: #f4f4f4;
+:root {
+    --bg: #0f172a;
+    --bg-soft: #020617;
+    --card: #020617;
+    --border: #1e293b;
+    --text: #e5e7eb;
+    --muted: #94a3b8;
+    --primary: #6366f1;
+    --primary-hover: #4f46e5;
 }
 
-.container {
+.light {
+    --bg: #f1f5f9;
+    --bg-soft: #e2e8f0;
+    --card: #ffffff;
+    --border: #e5e7eb;
+    --text: #020617;
+    --muted: #64748b;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    background: radial-gradient(circle at top, var(--bg), var(--bg-soft));
+    color: var(--text);
+}
+
+/* HEADER */
+header {
+    max-width: 1200px;
+    margin: auto;
+    padding: 40px 20px 10px;
     display: flex;
-    flex-wrap: wrap;
-    gap: 20px;
-    justify-content: center;
+    justify-content: space-between;
+    align-items: center;
+}
+
+header h1 {
+    margin: 0;
+    font-size: 28px;
+}
+
+header p {
+    margin: 6px 0 0;
+    font-size: 14px;
+    color: var(--muted);
+}
+
+.toggle {
+    background: var(--card);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 10px 14px;
+    border-radius: 12px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+/* MAIN */
+.container {
+    max-width: 1200px;
+    margin: auto;
+    padding: 20px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 24px;
 }
 
 .card {
-    background: white;
-    border-radius: 8px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    background: var(--card);
+    border-radius: 18px;
     padding: 20px;
-    width: 300px;
-    box-sizing: border-box;
+    border: 1px solid var(--border);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.25);
 }
 
 .card h2 {
     margin-top: 0;
+    font-size: 18px;
 }
 
+/* INPUT */
 input[type="file"] {
-    margin-bottom: 10px;
-}
-
-img {
-    max-width: 100%;
-    border: 1px solid #ddd;
-}
-
-canvas {
-    max-width: 100%;
-    border: 1px solid #ddd;
-    cursor: grab;
-}
-
-button {
-    margin-top: 10px;
-    padding: 10px 15px;
-    background: #007bff;
-    color: white;
-    border: none;
-    border-radius: 4px;
+    width: 100%;
+    padding: 12px;
+    border-radius: 12px;
+    border: 1px dashed var(--border);
+    background: transparent;
+    color: var(--text);
     cursor: pointer;
 }
 
-button:hover {
-    background: #0056b3;
+/* IMAGE PREVIEW */
+img {
+    margin-top: 14px;
+    width: 100%;
+    border-radius: 14px;
+    border: 1px solid var(--border);
+}
+
+/* CANVAS */
+canvas {
+    width: 100%;
+    border-radius: 16px;
+    border: 1px solid var(--border);
+    background: #000;
+    cursor: grab;
+}
+
+/* BUTTONS */
+button {
+    width: 100%;
+    margin-top: 12px;
+    padding: 12px;
+    border-radius: 14px;
+    border: none;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+#saveButton {
+    background: linear-gradient(135deg, var(--primary), var(--primary-hover));
+    color: #fff;
+}
+
+#resetButton {
+    background: transparent;
+    color: var(--muted);
+    border: 1px solid var(--border);
 }
 
 .hidden {
@@ -67,15 +148,16 @@ button:hover {
 }
 
 .recommendation {
-    font-size: 0.9em;
-    color: #666;
+    font-size: 13px;
+    color: var(--muted);
+    margin-bottom: 10px;
 }
 
+/* FOOTER */
 footer {
-    margin-top: 40px;
-    padding: 15px;
     text-align: center;
-    color: #777;
+    padding: 30px 20px;
+    color: var(--muted);
     font-size: 14px;
 }
 </style>
@@ -83,17 +165,25 @@ footer {
 
 <body>
 
+<header>
+    <div>
+        <h1>Photo Frame Editor</h1>
+        <p>Masukkan foto ke dalam bingkai secara presisi</p>
+    </div>
+    <button class="toggle" id="modeToggle">🌙 Dark</button>
+</header>
+
 <div class="container">
 
     <div class="card">
-        <h2>Upload Foto Utama</h2>
+        <h2>Upload Foto</h2>
         <input type="file" id="photoInput" accept=".jpg,.jpeg,.png">
         <img id="photoPreview" class="hidden">
     </div>
 
     <div class="card">
-        <h2>Upload Bingkai Foto</h2>
-        <p class="recommendation">Disarankan menggunakan PNG dengan background transparan.</p>
+        <h2>Upload Bingkai</h2>
+        <p class="recommendation">Disarankan PNG transparan</p>
         <input type="file" id="frameInput" accept=".jpg,.jpeg,.png">
         <img id="framePreview" class="hidden">
     </div>
@@ -112,125 +202,97 @@ footer {
 </footer>
 
 <script>
+const body = document.body;
+const toggle = document.getElementById('modeToggle');
+
+toggle.onclick = () => {
+    body.classList.toggle('light');
+    toggle.textContent = body.classList.contains('light') ? '☀️ Light' : '🌙 Dark';
+};
+
 const photoInput = document.getElementById('photoInput');
 const frameInput = document.getElementById('frameInput');
 const photoPreview = document.getElementById('photoPreview');
 const framePreview = document.getElementById('framePreview');
-const resultCanvas = document.getElementById('resultCanvas');
-const saveButton = document.getElementById('saveButton');
-const resetButton = document.getElementById('resetButton');
+const canvas = document.getElementById('resultCanvas');
+const ctx = canvas.getContext('2d');
+const saveBtn = document.getElementById('saveButton');
+const resetBtn = document.getElementById('resetButton');
 
-let photoImage = null;
-let frameImage = null;
-let ctx = resultCanvas.getContext('2d');
-
-// posisi foto
-let photoX = 0;
-let photoY = 0;
+let photo, frame;
 let scale = 1;
+let x = 0, y = 0;
+let dragging = false;
+let offsetX = 0, offsetY = 0;
 
-// drag state
-let isDragging = false;
-let startX = 0;
-let startY = 0;
-
-photoInput.addEventListener('change', e => loadImage(e, 'photo'));
-frameInput.addEventListener('change', e => loadImage(e, 'frame'));
-
-function loadImage(event, type) {
-    const file = event.target.files[0];
+function loadImage(input, cb, preview) {
+    const file = input.files[0];
     if (!file) return;
-
     const reader = new FileReader();
     reader.onload = e => {
         const img = new Image();
-        img.onload = () => {
-            if (type === 'photo') {
-                photoImage = img;
-                photoPreview.src = img.src;
-                photoPreview.classList.remove('hidden');
-            } else {
-                frameImage = img;
-                framePreview.src = img.src;
-                framePreview.classList.remove('hidden');
-            }
-            initCanvas();
-        };
+        img.onload = () => cb(img);
         img.src = e.target.result;
+        preview.src = e.target.result;
+        preview.classList.remove('hidden');
     };
     reader.readAsDataURL(file);
 }
 
-function initCanvas() {
-    if (!photoImage || !frameImage) return;
+photoInput.onchange = () => loadImage(photoInput, img => { photo = img; init(); }, photoPreview);
+frameInput.onchange = () => loadImage(frameInput, img => { frame = img; init(); }, framePreview);
 
-    resultCanvas.width = frameImage.width;
-    resultCanvas.height = frameImage.height;
+function init() {
+    if (!photo || !frame) return;
+    canvas.width = frame.width;
+    canvas.height = frame.height;
 
-    scale = Math.max(
-        frameImage.width / photoImage.width,
-        frameImage.height / photoImage.height
-    );
+    scale = Math.max(frame.width / photo.width, frame.height / photo.height);
+    x = (frame.width - photo.width * scale) / 2;
+    y = (frame.height - photo.height * scale) / 2;
 
-    photoX = (frameImage.width - photoImage.width * scale) / 2;
-    photoY = (frameImage.height - photoImage.height * scale) / 2;
-
-    resultCanvas.classList.remove('hidden');
-    saveButton.classList.remove('hidden');
-
-    drawCanvas();
+    canvas.classList.remove('hidden');
+    saveBtn.classList.remove('hidden');
+    draw();
 }
 
-function drawCanvas() {
-    ctx.clearRect(0, 0, resultCanvas.width, resultCanvas.height);
-    ctx.drawImage(
-        photoImage,
-        photoX,
-        photoY,
-        photoImage.width * scale,
-        photoImage.height * scale
-    );
-    ctx.drawImage(frameImage, 0, 0);
+function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(photo, x, y, photo.width * scale, photo.height * scale);
+    ctx.drawImage(frame, 0, 0);
 }
 
-// DRAG LOGIC
-resultCanvas.addEventListener('mousedown', e => {
-    isDragging = true;
-    startX = e.offsetX - photoX;
-    startY = e.offsetY - photoY;
-    resultCanvas.style.cursor = 'grabbing';
-});
+canvas.onmousedown = e => {
+    dragging = true;
+    offsetX = e.offsetX - x;
+    offsetY = e.offsetY - y;
+};
 
-resultCanvas.addEventListener('mousemove', e => {
-    if (!isDragging) return;
-    photoX = e.offsetX - startX;
-    photoY = e.offsetY - startY;
-    drawCanvas();
-});
+canvas.onmousemove = e => {
+    if (!dragging) return;
+    x = e.offsetX - offsetX;
+    y = e.offsetY - offsetY;
+    draw();
+};
 
-window.addEventListener('mouseup', () => {
-    isDragging = false;
-    resultCanvas.style.cursor = 'grab';
-});
+window.onmouseup = () => dragging = false;
 
-// SAVE
-saveButton.addEventListener('click', () => {
-    const link = document.createElement('a');
-    link.download = 'edited_photo.png';
-    link.href = resultCanvas.toDataURL('image/png');
-    link.click();
-});
+saveBtn.onclick = () => {
+    const a = document.createElement('a');
+    a.download = 'photo-frame.png';
+    a.href = canvas.toDataURL('image/png');
+    a.click();
+};
 
-// RESET
-resetButton.addEventListener('click', () => {
+resetBtn.onclick = () => {
+    photo = frame = null;
     photoInput.value = '';
     frameInput.value = '';
     photoPreview.classList.add('hidden');
     framePreview.classList.add('hidden');
-    resultCanvas.classList.add('hidden');
-    saveButton.classList.add('hidden');
-    photoImage = frameImage = null;
-});
+    canvas.classList.add('hidden');
+    saveBtn.classList.add('hidden');
+};
 </script>
 
 </body>
