@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Photo Editor</title>
+
+<style>
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 20px;
+    background-color: #f4f4f4;
+}
+
+.container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    justify-content: center;
+}
+
+.card {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    padding: 20px;
+    width: 300px;
+    box-sizing: border-box;
+}
+
+.card h2 {
+    margin-top: 0;
+}
+
+input[type="file"] {
+    margin-bottom: 10px;
+}
+
+img {
+    max-width: 100%;
+    border: 1px solid #ddd;
+}
+
+canvas {
+    max-width: 100%;
+    border: 1px solid #ddd;
+    cursor: grab;
+}
+
+button {
+    margin-top: 10px;
+    padding: 10px 15px;
+    background: #007bff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+button:hover {
+    background: #0056b3;
+}
+
+.hidden {
+    display: none;
+}
+
+.recommendation {
+    font-size: 0.9em;
+    color: #666;
+}
+
+footer {
+    margin-top: 40px;
+    padding: 15px;
+    text-align: center;
+    color: #777;
+    font-size: 14px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <div class="card">
+        <h2>Upload Foto Utama</h2>
+        <input type="file" id="photoInput" accept=".jpg,.jpeg,.png">
+        <img id="photoPreview" class="hidden">
+    </div>
+
+    <div class="card">
+        <h2>Upload Bingkai Foto</h2>
+        <p class="recommendation">Disarankan menggunakan PNG dengan background transparan.</p>
+        <input type="file" id="frameInput" accept=".jpg,.jpeg,.png">
+        <img id="framePreview" class="hidden">
+    </div>
+
+    <div class="card">
+        <h2>Preview Hasil</h2>
+        <canvas id="resultCanvas" class="hidden"></canvas>
+        <button id="saveButton" class="hidden">Simpan</button>
+        <button id="resetButton">Reset</button>
+    </div>
+
+</div>
+
+<footer>
+    Creative by Mulya.id
+</footer>
+
+<script>
+const photoInput = document.getElementById('photoInput');
+const frameInput = document.getElementById('frameInput');
+const photoPreview = document.getElementById('photoPreview');
+const framePreview = document.getElementById('framePreview');
+const resultCanvas = document.getElementById('resultCanvas');
+const saveButton = document.getElementById('saveButton');
+const resetButton = document.getElementById('resetButton');
+
+let photoImage = null;
+let frameImage = null;
+let ctx = resultCanvas.getContext('2d');
+
+// posisi foto
+let photoX = 0;
+let photoY = 0;
+let scale = 1;
+
+// drag state
+let isDragging = false;
+let startX = 0;
+let startY = 0;
+
+photoInput.addEventListener('change', e => loadImage(e, 'photo'));
+frameInput.addEventListener('change', e => loadImage(e, 'frame'));
+
+function loadImage(event, type) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = e => {
+        const img = new Image();
+        img.onload = () => {
+            if (type === 'photo') {
+                photoImage = img;
+                photoPreview.src = img.src;
+                photoPreview.classList.remove('hidden');
+            } else {
+                frameImage = img;
+                framePreview.src = img.src;
+                framePreview.classList.remove('hidden');
+            }
+            initCanvas();
+        };
+        img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+}
+
+function initCanvas() {
+    if (!photoImage || !frameImage) return;
+
+    resultCanvas.width = frameImage.width;
+    resultCanvas.height = frameImage.height;
+
+    scale = Math.max(
+        frameImage.width / photoImage.width,
+        frameImage.height / photoImage.height
+    );
+
+    photoX = (frameImage.width - photoImage.width * scale) / 2;
+    photoY = (frameImage.height - photoImage.height * scale) / 2;
+
+    resultCanvas.classList.remove('hidden');
+    saveButton.classList.remove('hidden');
+
+    drawCanvas();
+}
+
+function drawCanvas() {
+    ctx.clearRect(0, 0, resultCanvas.width, resultCanvas.height);
+    ctx.drawImage(
+        photoImage,
+        photoX,
+        photoY,
+        photoImage.width * scale,
+        photoImage.height * scale
+    );
+    ctx.drawImage(frameImage, 0, 0);
+}
+
+// DRAG LOGIC
+resultCanvas.addEventListener('mousedown', e => {
+    isDragging = true;
+    startX = e.offsetX - photoX;
+    startY = e.offsetY - photoY;
+    resultCanvas.style.cursor = 'grabbing';
+});
+
+resultCanvas.addEventListener('mousemove', e => {
+    if (!isDragging) return;
+    photoX = e.offsetX - startX;
+    photoY = e.offsetY - startY;
+    drawCanvas();
+});
+
+window.addEventListener('mouseup', () => {
+    isDragging = false;
+    resultCanvas.style.cursor = 'grab';
+});
+
+// SAVE
+saveButton.addEventListener('click', () => {
+    const link = document.createElement('a');
+    link.download = 'edited_photo.png';
+    link.href = resultCanvas.toDataURL('image/png');
+    link.click();
+});
+
+// RESET
+resetButton.addEventListener('click', () => {
+    photoInput.value = '';
+    frameInput.value = '';
+    photoPreview.classList.add('hidden');
+    framePreview.classList.add('hidden');
+    resultCanvas.classList.add('hidden');
+    saveButton.classList.add('hidden');
+    photoImage = frameImage = null;
+});
+</script>
+
+</body>
+</html>
