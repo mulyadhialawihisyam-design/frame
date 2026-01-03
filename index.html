@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="id">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -26,9 +26,7 @@
     --muted: #64748b;
 }
 
-* {
-    box-sizing: border-box;
-}
+* { box-sizing: border-box; }
 
 body {
     margin: 0;
@@ -48,16 +46,8 @@ header {
     align-items: center;
 }
 
-header h1 {
-    margin: 0;
-    font-size: 28px;
-}
-
-header p {
-    margin: 6px 0 0;
-    font-size: 14px;
-    color: var(--muted);
-}
+header h1 { margin: 0; font-size: 28px; }
+header p { margin: 6px 0 0; font-size: 14px; color: var(--muted); }
 
 .toggle {
     background: var(--card);
@@ -66,7 +56,6 @@ header p {
     padding: 10px 14px;
     border-radius: 12px;
     cursor: pointer;
-    font-size: 14px;
 }
 
 /* MAIN */
@@ -87,10 +76,7 @@ header p {
     box-shadow: 0 10px 30px rgba(0,0,0,0.25);
 }
 
-.card h2 {
-    margin-top: 0;
-    font-size: 18px;
-}
+.card h2 { margin-top: 0; font-size: 18px; }
 
 /* INPUT */
 input[type="file"] {
@@ -117,7 +103,7 @@ canvas {
     border-radius: 16px;
     border: 1px solid var(--border);
     background: #000;
-    cursor: grab;
+    touch-action: none;
 }
 
 /* BUTTONS */
@@ -143,9 +129,7 @@ button {
     border: 1px solid var(--border);
 }
 
-.hidden {
-    display: none;
-}
+.hidden { display: none; }
 
 .recommendation {
     font-size: 13px;
@@ -177,14 +161,14 @@ footer {
 
     <div class="card">
         <h2>Upload Foto</h2>
-        <input type="file" id="photoInput" accept=".jpg,.jpeg,.png">
+        <input type="file" id="photoInput" accept="image/*">
         <img id="photoPreview" class="hidden">
     </div>
 
     <div class="card">
         <h2>Upload Bingkai</h2>
         <p class="recommendation">Disarankan PNG transparan</p>
-        <input type="file" id="frameInput" accept=".jpg,.jpeg,.png">
+        <input type="file" id="frameInput" accept="image/*">
         <img id="framePreview" class="hidden">
     </div>
 
@@ -197,14 +181,12 @@ footer {
 
 </div>
 
-<footer>
-    Creative by Mulya.id
-</footer>
+<footer>Creative by Mulya.id</footer>
 
 <script>
+/* MODE TOGGLE */
 const body = document.body;
 const toggle = document.getElementById('modeToggle');
-
 toggle.onclick = () => {
     body.classList.toggle('light');
     toggle.textContent = body.classList.contains('light') ? '☀️ Light' : '🌙 Dark';
@@ -223,8 +205,9 @@ let photo, frame, hole;
 let scale = 1;
 let x = 0, y = 0;
 let dragging = false;
-let offsetX = 0, offsetY = 0;
+let startX = 0, startY = 0;
 
+/* IMAGE LOAD */
 function loadImage(input, cb, preview) {
     const file = input.files[0];
     if (!file) return;
@@ -242,61 +225,60 @@ function loadImage(input, cb, preview) {
 photoInput.onchange = () => loadImage(photoInput, img => { photo = img; init(); }, photoPreview);
 frameInput.onchange = () => loadImage(frameInput, img => { frame = img; detectHole(); init(); }, framePreview);
 
+/* AUTO DETECT HOLE */
 function detectHole() {
-    if (!frame) return;
-    // Gambar frame ke canvas sementara untuk deteksi
-    const tempCanvas = document.createElement('canvas');
-    tempCanvas.width = frame.width;
-    tempCanvas.height = frame.height;
-    const tempCtx = tempCanvas.getContext('2d');
-    tempCtx.drawImage(frame, 0, 0);
-    
-    // Fungsi autoDetectHole seperti sebelumnya
-    const imgData = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
-    const data = imgData.data;
-    const visited = new Array(tempCanvas.width * tempCanvas.height).fill(false);
-    const cx = Math.floor(tempCanvas.width / 2);
-    const cy = Math.floor(tempCanvas.height / 2);
-    const startIdx = (cy * tempCanvas.width + cx) * 4;
-    const baseColor = [data[startIdx], data[startIdx+1], data[startIdx+2], data[startIdx+3]];
-    const tol = 30; // Toleransi warna
+    const t = document.createElement('canvas');
+    t.width = frame.width;
+    t.height = frame.height;
+    const tc = t.getContext('2d');
+    tc.drawImage(frame, 0, 0);
 
-    let minX = tempCanvas.width, maxX = 0, minY = tempCanvas.height, maxY = 0;
+    const img = tc.getImageData(0, 0, t.width, t.height);
+    const d = img.data;
+    const cx = Math.floor(t.width / 2);
+    const cy = Math.floor(t.height / 2);
+    const base = d.slice((cy * t.width + cx) * 4, (cy * t.width + cx) * 4 + 4);
+    const tol = 30;
     const stack = [[cx, cy]];
+    const visited = new Set();
 
-    while (stack.length > 0) {
+    let minX = t.width, minY = t.height, maxX = 0, maxY = 0;
+
+    while (stack.length) {
         const [x, y] = stack.pop();
-        const idx = (y * tempCanvas.width + x) * 4;
-        if (visited[y * tempCanvas.width + x] || 
-            Math.abs(data[idx] - baseColor[0]) > tol || 
-            Math.abs(data[idx+1] - baseColor[1]) > tol || 
-            Math.abs(data[idx+2] - baseColor[2]) > tol || 
-            Math.abs(data[idx+3] - baseColor[3]) > tol) {
-            continue;
-        }
-        visited[y * tempCanvas.width + x] = true;
+        const key = y * t.width + x;
+        if (visited.has(key)) continue;
+        visited.add(key);
+
+        const i = key * 4;
+        if (Math.abs(d[i] - base[0]) > tol ||
+            Math.abs(d[i+1] - base[1]) > tol ||
+            Math.abs(d[i+2] - base[2]) > tol ||
+            Math.abs(d[i+3] - base[3]) > tol) continue;
+
         minX = Math.min(minX, x);
         maxX = Math.max(maxX, x);
         minY = Math.min(minY, y);
         maxY = Math.max(maxY, y);
 
-        // Tambahkan tetangga
         if (x > 0) stack.push([x-1, y]);
-        if (x < tempCanvas.width - 1) stack.push([x+1, y]);
+        if (x < t.width-1) stack.push([x+1, y]);
         if (y > 0) stack.push([x, y-1]);
-        if (y < tempCanvas.height - 1) stack.push([x, y+1]);
+        if (y < t.height-1) stack.push([x, y+1]);
     }
 
-    hole = {x: minX, y: minY, w: maxX - minX + 1, h: maxY - minY + 1};
+    hole = { x: minX, y: minY, w: maxX - minX, h: maxY - minY };
 }
 
+/* INIT */
 function init() {
     if (!photo || !frame || !hole) return;
+
     canvas.width = frame.width;
     canvas.height = frame.height;
 
-    // Sesuaikan skala dan posisi foto dengan lubang
-    scale = Math.min(hole.w / photo.width, hole.h / photo.height);
+    // COVER MODE (PENTING)
+    scale = Math.max(hole.w / photo.width, hole.h / photo.height);
     x = hole.x + (hole.w - photo.width * scale) / 2;
     y = hole.y + (hole.h - photo.height * scale) / 2;
 
@@ -306,26 +288,45 @@ function init() {
 }
 
 function draw() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.clearRect(0,0,canvas.width,canvas.height);
     ctx.drawImage(photo, x, y, photo.width * scale, photo.height * scale);
     ctx.drawImage(frame, 0, 0);
 }
 
-canvas.onmousedown = e => {
+/* DRAG SUPPORT (MOUSE + TOUCH) */
+function startDrag(px, py) {
     dragging = true;
-    offsetX = e.offsetX - x;
-    offsetY = e.offsetY - y;
-};
+    startX = px - x;
+    startY = py - y;
+}
 
-canvas.onmousemove = e => {
+function moveDrag(px, py) {
     if (!dragging) return;
-    x = e.offsetX - offsetX;
-    y = e.offsetY - offsetY;
+    x = px - startX;
+    y = py - startY;
     draw();
-};
+}
 
-window.onmouseup = () => dragging = false;
+canvas.addEventListener('mousedown', e => startDrag(e.offsetX, e.offsetY));
+canvas.addEventListener('mousemove', e => moveDrag(e.offsetX, e.offsetY));
+window.addEventListener('mouseup', () => dragging = false);
 
+canvas.addEventListener('touchstart', e => {
+    const t = e.touches[0];
+    const r = canvas.getBoundingClientRect();
+    startDrag(t.clientX - r.left, t.clientY - r.top);
+});
+
+canvas.addEventListener('touchmove', e => {
+    const t = e.touches[0];
+    const r = canvas.getBoundingClientRect();
+    moveDrag(t.clientX - r.left, t.clientY - r.top);
+    e.preventDefault();
+});
+
+canvas.addEventListener('touchend', () => dragging = false);
+
+/* SAVE */
 saveBtn.onclick = () => {
     const a = document.createElement('a');
     a.download = 'photo-frame.png';
@@ -333,15 +334,8 @@ saveBtn.onclick = () => {
     a.click();
 };
 
-resetBtn.onclick = () => {
-    photo = frame = hole = null;
-    photoInput.value = '';
-    frameInput.value = '';
-    photoPreview.classList.add('hidden');
-    framePreview.classList.add('hidden');
-    canvas.classList.add('hidden');
-    saveBtn.classList.add('hidden');
-};
+/* RESET */
+resetBtn.onclick = () => location.reload();
 </script>
 
 </body>
