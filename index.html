@@ -219,7 +219,7 @@ const ctx = canvas.getContext('2d');
 const saveBtn = document.getElementById('saveButton');
 const resetBtn = document.getElementById('resetButton');
 
-let photo, frame;
+let photo, frame, hole;
 let scale = 1;
 let x = 0, y = 0;
 let dragging = false;
@@ -240,16 +240,65 @@ function loadImage(input, cb, preview) {
 }
 
 photoInput.onchange = () => loadImage(photoInput, img => { photo = img; init(); }, photoPreview);
-frameInput.onchange = () => loadImage(frameInput, img => { frame = img; init(); }, framePreview);
+frameInput.onchange = () => loadImage(frameInput, img => { frame = img; detectHole(); init(); }, framePreview);
+
+function detectHole() {
+    if (!frame) return;
+    // Gambar frame ke canvas sementara untuk deteksi
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = frame.width;
+    tempCanvas.height = frame.height;
+    const tempCtx = tempCanvas.getContext('2d');
+    tempCtx.drawImage(frame, 0, 0);
+    
+    // Fungsi autoDetectHole seperti sebelumnya
+    const imgData = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
+    const data = imgData.data;
+    const visited = new Array(tempCanvas.width * tempCanvas.height).fill(false);
+    const cx = Math.floor(tempCanvas.width / 2);
+    const cy = Math.floor(tempCanvas.height / 2);
+    const startIdx = (cy * tempCanvas.width + cx) * 4;
+    const baseColor = [data[startIdx], data[startIdx+1], data[startIdx+2], data[startIdx+3]];
+    const tol = 30; // Toleransi warna
+
+    let minX = tempCanvas.width, maxX = 0, minY = tempCanvas.height, maxY = 0;
+    const stack = [[cx, cy]];
+
+    while (stack.length > 0) {
+        const [x, y] = stack.pop();
+        const idx = (y * tempCanvas.width + x) * 4;
+        if (visited[y * tempCanvas.width + x] || 
+            Math.abs(data[idx] - baseColor[0]) > tol || 
+            Math.abs(data[idx+1] - baseColor[1]) > tol || 
+            Math.abs(data[idx+2] - baseColor[2]) > tol || 
+            Math.abs(data[idx+3] - baseColor[3]) > tol) {
+            continue;
+        }
+        visited[y * tempCanvas.width + x] = true;
+        minX = Math.min(minX, x);
+        maxX = Math.max(maxX, x);
+        minY = Math.min(minY, y);
+        maxY = Math.max(maxY, y);
+
+        // Tambahkan tetangga
+        if (x > 0) stack.push([x-1, y]);
+        if (x < tempCanvas.width - 1) stack.push([x+1, y]);
+        if (y > 0) stack.push([x, y-1]);
+        if (y < tempCanvas.height - 1) stack.push([x, y+1]);
+    }
+
+    hole = {x: minX, y: minY, w: maxX - minX + 1, h: maxY - minY + 1};
+}
 
 function init() {
-    if (!photo || !frame) return;
+    if (!photo || !frame || !hole) return;
     canvas.width = frame.width;
     canvas.height = frame.height;
 
-    scale = Math.max(frame.width / photo.width, frame.height / photo.height);
-    x = (frame.width - photo.width * scale) / 2;
-    y = (frame.height - photo.height * scale) / 2;
+    // Sesuaikan skala dan posisi foto dengan lubang
+    scale = Math.min(hole.w / photo.width, hole.h / photo.height);
+    x = hole.x + (hole.w - photo.width * scale) / 2;
+    y = hole.y + (hole.h - photo.height * scale) / 2;
 
     canvas.classList.remove('hidden');
     saveBtn.classList.remove('hidden');
@@ -285,7 +334,7 @@ saveBtn.onclick = () => {
 };
 
 resetBtn.onclick = () => {
-    photo = frame = null;
+    photo = frame = hole = null;
     photoInput.value = '';
     frameInput.value = '';
     photoPreview.classList.add('hidden');
